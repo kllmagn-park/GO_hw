@@ -1,6 +1,6 @@
-I LOVE MUSIC.
-I love music.
-I love music.
+a I LOVE MUSIC.
+D I love music.
+C I love music.
 
 I love music of Kartik.
 I love music of Kartik.

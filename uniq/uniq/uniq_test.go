@@ -6,14 +6,37 @@ import (
 )
 
 func TestUniq(t *testing.T) {
-	var exp Expression
-	// assert equality
+	var lines []string
+	var err error
+	var options Options
+	optionsDefault := GetDefaultOptions()
 
-	val, err := exp.Calc("8*5+2")
+	options = optionsDefault
+	lines, err = Uniq(
+		[]string {
+			"I love music",
+			"I love music",
+		}, options,
+	)
 	if assert.Nil(t, err) {
-		assert.Equal(t, val, float64(42), "they should be equal")
+		assert.Equal(t, lines,
+		[]string {
+			"I love music",
+		}, "they should be equal")
 	}
 
-	_, err = exp.Calc("4+2*")
-	assert.NotNil(t, err)
+	options = optionsDefault
+	options.IgnoreCase = true
+	lines, err = Uniq(
+		[]string {
+			"I LOVE MUSIC",
+			"I love music",
+		}, options,
+	)
+	if assert.Nil(t, err) {
+		assert.Equal(t, lines,
+		[]string {
+			"I LOVE MUSIC",
+		}, "they should be equal")
+	}
 }
