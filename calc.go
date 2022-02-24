@@ -1,4 +1,4 @@
-package exeval
+package calc
 
 import (
 	"flag"
@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+	"log"
+	"os"
 )
 
 type Stack []string
@@ -38,19 +40,25 @@ func (s *Stack) Contains(val string) bool {
 	return false
 }
 
+func (s *Stack) Clear() {
+	*s = nil
+}
+
 var operPriorities = map[string]int{
 	"*/": 2,
 	"+-": 1,
 }
 
+type Expression struct { stack Stack }
+
 // Произвести форматирование выражения для дальнейшего парсинга.
-func format(formula string) string {
+func (e* Expression) format(formula string) (string, error) {
 	formula = strings.ReplaceAll(formula, " ", "")
-	return formula
+	return formula, nil
 }
 
 // Получить числовой приоритет соответствующего оператора.
-func getPriority(operator string) int {
+func (e* Expression) getPriority(operator string) int {
 	for k, v := range operPriorities {
 		if strings.Contains(k, operator) {
 			return v
@@ -60,44 +68,45 @@ func getPriority(operator string) int {
 }
 
 // Произвести преобразование выражение из инфиксной в постфиксную запись.
-func parse(formula string) string {
+func (e* Expression) parse(formula string) (string, error) {
 	form := []rune(formula)
-	var stack Stack
 	var parsed string = ""
 	for i := 0; i < len(form); i++ {
 		ch := form[i]
 		chs := string(ch)
-		priority := getPriority(chs)
+		priority := e.getPriority(chs)
 		if unicode.IsNumber(ch) {
 			// любое однозначное число
 			parsed += chs
 		} else if priority != -1 {
 			// любой оператор
-			val, exists := stack.Pop()
-			stack.Push(val)
-			if !exists || getPriority(val) < priority || stack.Contains("(") {
-				stack.Push(chs)
+			val, exists := e.stack.Pop()
+			if exists {
+				e.stack.Push(val)
+			}
+			if !exists || e.getPriority(val) < priority || e.stack.Contains("(") {
+				e.stack.Push(chs)
 			} else {
 				for true {
-					val, exists := stack.Pop()
+					val, exists := e.stack.Pop()
 					if !exists {
 						break
 					}
-					if val == "(" || val == ")" || getPriority(val) < priority {
-						stack.Push(val)
+					if val == "(" || val == ")" || e.getPriority(val) < priority {
+						e.stack.Push(val)
 						break
 					}
 					parsed += val
 				}
-				stack.Push(chs)
+				e.stack.Push(chs)
 			}
 		} else if chs == "(" {
 			// левая скобка
-			stack.Push(chs)
+			e.stack.Push(chs)
 		} else if chs == ")" {
 			// правая скобка
 			for true {
-				val, exists := stack.Pop()
+				val, exists := e.stack.Pop()
 				if !exists {
 					break
 				}
@@ -108,26 +117,43 @@ func parse(formula string) string {
 			}
 		} else {
 			// остальные символы
-			panic("Неизвестный символ: " + chs)
+			return "", fmt.Errorf("Неизвестный символ: " + chs)
 		}
 	}
-	for i := 0; i < len(stack); i++ {
-		parsed += string(stack[len(stack)-(i+1)])
+	exists := true
+	for exists {
+		val, exists := e.stack.Pop()
+		if !exists {
+			break
+		}
+		parsed += val
 	}
-	return parsed
+	return parsed, nil
 }
 
 // Вычислить заданную постфиксную запись выражения.
-func eval(formula string) float64 {
+func (e *Expression) eval(formula string) (float64, error) {
+	defer func() {
+		e.stack.Clear()
+	}()
 	form := []rune(formula)
-	var stack []string
 	for i := 0; i < len(form); i++ {
 		ch := form[i]
 		chs := string(ch)
-		if getPriority(chs) != -1 {
-			val1, _ := strconv.ParseFloat(stack[len(stack)-1], 64)
-			val2, _ := strconv.ParseFloat(stack[len(stack)-2], 64)
-			stack = stack[:len(stack)-2]
+		if e.getPriority(chs) != -1 {
+			val1Str, exists1 := e.stack.Pop()
+			val2Str, exists2 := e.stack.Pop()
+			if (!exists1 || !exists2) {
+				return 0, fmt.Errorf("Неверный формат постфиксной записи.")
+			}
+			val1, err := strconv.ParseFloat(val1Str, 64)
+			if (err != nil) {
+				return 0, err
+			}
+			val2, err := strconv.ParseFloat(val2Str, 64)
+			if (err != nil) {
+				return 0, err
+			}
 			var v3 float64
 			switch ch {
 			case '+':
@@ -139,34 +165,52 @@ func eval(formula string) float64 {
 			case '/':
 				v3 = val2 / val1
 			default:
-				panic("Неизвестный оператор.")
+				return 0, fmt.Errorf("Неизвестный оператор: "+chs)
 			}
 			val3 := strconv.FormatFloat(v3, 'f', -1, 64)
-			stack = append(stack, val3)
+			e.stack.Push(val3)
 		} else if unicode.IsNumber(ch) {
-			stack = append(stack, chs)
+			e.stack.Push(chs)
+		} else {
+			return 0, fmt.Errorf("Неизвестный символ постфиксной записи: " + chs)
 		}
 	}
-	res, _ := strconv.ParseFloat(stack[0], 64)
-	return res
+	res, _ := strconv.ParseFloat(e.stack[0], 64)
+	return res, nil
 }
 
 // Вычислить заданное выражение в строковом формате.
-func calc(formula string) float64 {
-	formula = format(formula)
-	parsed := parse(formula)
-	fmt.Println(parsed)
-	return eval(parsed)
+func (e *Expression) Calc(formula string) (float64, error) {
+	formula, err := e.format(formula)
+	if (err != nil) {
+		return 0, err
+	}
+	parsed, err := e.parse(formula)
+	if (err != nil) {
+		return 0, err
+	}
+	return e.eval(parsed)
 }
 
 func main() {
+	flag.Usage = func() {
+		fmt.Printf("Usage: %s expression\n", os.Args[0])
+     	flag.PrintDefaults()
+	}
 	flag.Parse()
 	if flag.NArg() == 0 {
-		fmt.Print("Недостаточно аргументов.")
+		flag.Usage()
+    	os.Exit(1)
 	} else if flag.NArg() > 1 {
-		fmt.Print("Слишком много аргументов.")
+		flag.Usage()
+		os.Exit(1)
 	}
+	var exp Expression
 	input := flag.Arg(0)
-	ans := calc(input)
+	ans, err := exp.Calc(input)
+	if (err != nil) {
+		log.Fatal(err)
+		return
+	}
 	fmt.Println(ans)
 }
