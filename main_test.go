@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -146,4 +147,62 @@ func TestSigner(t *testing.T) {
 		t.Errorf("not enough hash-func calls")
 	}
 
+}
+
+func TestPipelineAdditional (t *testing.T) {
+	var output string
+	testOutput := "HELLO, MY BEAUTIFUL WORLD!"
+	jobs := []job {
+		func(in, out chan interface{}) {
+			inputs := []string {
+				"Hello,",
+				" my",
+				" beautiful",
+				" world!",
+			}
+			for _, input := range inputs {
+				out <- input
+				time.Sleep(time.Second*2)
+			}
+		},
+		func(in, out chan interface{}) {
+			for input := range in {
+				out <- strings.ToUpper(input.(string))
+			}
+		},
+		func(in, out chan interface{}) {
+			var inputs []string
+			for input := range in {
+				inputs = append(inputs, input.(string))
+			}
+			output = strings.Join(inputs, "")
+		},
+	}
+	ExecutePipeline(jobs...)
+	if testOutput != output {
+		t.Errorf("Results do not match. Exp.: %v, got: %v", testOutput, output)
+	}
+}
+
+func TestHashing(t *testing.T) {
+	in, out := make(chan interface{}), make(chan interface{})
+
+	go SingleHash(in, out)
+	in <- 0
+	close(in)
+	result := <-out
+	expected := "4108050209~502633748"
+	if result != expected {
+		t.Errorf("SingleHash: results do not match. Exp.: %v, got: %v", expected, result)
+	}
+	in = make(chan interface{})
+
+	go MultiHash(in, out)
+	in <- result
+	close(in)
+    result = <-out
+	expected = "29568666068035183841425683795340791879727309630931025356555"
+	if result != expected {
+		t.Errorf("MultiHash: results do not match. Exp.: %v, got: %v", expected, result)
+	}
 }
