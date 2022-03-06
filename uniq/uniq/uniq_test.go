@@ -19,10 +19,10 @@ func TestNoOptions(t *testing.T) {
 		}, options,
 	)
 	if assert.Nil(t, err) {
-		assert.Equal(t, lines,
+		assert.Equal(t,
 		[]string {
 			"I love music",
-		}, "they should be equal")
+		}, lines)
 	}
 }
 
@@ -41,10 +41,10 @@ func TestIgnoreCase(t *testing.T) {
 		}, options,
 	)
 	if assert.Nil(t, err) {
-		assert.Equal(t, lines,
+		assert.Equal(t,
 		[]string {
 			"I LOVE MUSIC",
-		}, "they should be equal")
+		}, lines)
 	}
 }
 
@@ -65,13 +65,13 @@ func TestFieldsChars(t *testing.T) {
 		}, options,
 	)
 	if assert.Nil(t, err) {
-		assert.Equal(t, lines,
+		assert.Equal(t,
 		[]string {
 			"I love music",
 			"I love music",
 			" ",
 			"I LOVE MUSIC",
-		}, "they should be equal")
+		}, lines)
 	}
 
 	options = optionsDefault
@@ -87,13 +87,13 @@ func TestFieldsChars(t *testing.T) {
 		}, options,
 	)
 	if assert.Nil(t, err) {
-		assert.Equal(t, lines,
+		assert.Equal(t,
 		[]string {
 			"A love music",
 			"B love music",
 			" ",
 			"C I LOVE MUSIC",
-		}, "they should be equal")
+		}, lines)
 	}
 }
 
@@ -114,11 +114,11 @@ func TestOutputUniq(t *testing.T) {
 		}, options,
 	)
 	if assert.Nil(t, err) {
-		assert.Equal(t, lines,
+		assert.Equal(t,
 		[]string {
 			"I do not love music",
 			"I LOVE MUSIC",
-		}, "they should be equal")
+		}, lines)
 	}
 }
 
@@ -139,11 +139,11 @@ func TestOutputRepeated(t *testing.T) {
 		}, options,
 	)
 	if assert.Nil(t, err) {
-		assert.Equal(t, lines,
+		assert.Equal(t,
 		[]string {
 			"I love music",
 			"I love music",
-		}, "they should be equal")
+		}, lines)
 	}
 }
 
@@ -164,13 +164,13 @@ func TestCount(t *testing.T) {
 		}, options,
 	)
 	if assert.Nil(t, err) {
-		assert.Equal(t, lines,
+		assert.Equal(t,
 		[]string {
 			"2 I love music",
 			"1 I do not love music",
 			"2 I love music",
 			"1 I LOVE MUSIC",
-		}, "they should be equal")
+		}, lines)
 	}
 
 	options = optionsDefault
@@ -185,12 +185,12 @@ func TestCount(t *testing.T) {
 		}, options,
 	)
 	if assert.Nil(t, err) {
-		assert.Equal(t, lines,
+		assert.Equal(t,
 		[]string {
 			"3 I love music",
 			"1 I do not love music",
 			"3 I love music",
 			"3 I LOVE MUSIC",
-		}, "they should be equal")
+		}, lines)
 	}
 }

@@ -1,7 +1,7 @@
 package main
 
 import (
-	uniq "uniq"
+	"uniq"
 	"bufio"
 	"flag"
 	"fmt"

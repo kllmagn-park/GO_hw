@@ -1,7 +1,7 @@
 package main
 
 import (
-	calc "calc"
+	"calc"
 	"flag"
 	"fmt"
 	"log"

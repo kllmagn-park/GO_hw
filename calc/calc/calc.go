@@ -64,45 +64,58 @@ func (e *Expression) getPriority(operator string) int {
 	return -1
 }
 
+// Произвести парсинг оператора в инфиксной записи.
+// Вывод: непустая строка в случае изъятия элементов из стека. Пустая строка в противном случае.
+func (e *Expression) parseOperator(operator string, priority int) (string, error) {
+	val, exists := e.stack.Pop()
+	if exists {
+		e.stack.Push(val)
+	}
+	if !exists || e.getPriority(val) < priority || e.stack.Contains("(") {
+		e.stack.Push(operator)
+	} else {
+		var parsed string;
+		for {
+			val, exists := e.stack.Pop()
+			if !exists {
+				break
+			}
+			if val == "(" || val == ")" || e.getPriority(val) < priority {
+				e.stack.Push(val)
+				break
+			}
+			parsed += val
+		}
+		e.stack.Push(operator)
+		return parsed, nil
+	}
+	return "", nil
+}
+
 // Произвести преобразование выражение из инфиксной в постфиксную запись.
 func (e *Expression) parse(formula string) (string, error) {
 	form := []rune(formula)
 	var parsed string = ""
 	for i := 0; i < len(form); i++ {
-		ch := form[i]
-		chs := string(ch)
-		priority := e.getPriority(chs)
+		ch := form[i] // символ в формате rune
+		chs := string(ch) // символ в формате строки
+		priority := e.getPriority(chs) // приоритет символа
 		if unicode.IsNumber(ch) {
 			// любое однозначное число
 			parsed += chs
 		} else if priority != -1 {
 			// любой оператор
-			val, exists := e.stack.Pop()
-			if exists {
-				e.stack.Push(val)
+			opParsed, err := e.parseOperator(chs, priority)
+			if (err != nil) {
+				return parsed, err
 			}
-			if !exists || e.getPriority(val) < priority || e.stack.Contains("(") {
-				e.stack.Push(chs)
-			} else {
-				for true {
-					val, exists := e.stack.Pop()
-					if !exists {
-						break
-					}
-					if val == "(" || val == ")" || e.getPriority(val) < priority {
-						e.stack.Push(val)
-						break
-					}
-					parsed += val
-				}
-				e.stack.Push(chs)
-			}
+			parsed += opParsed
 		} else if chs == "(" {
 			// левая скобка
 			e.stack.Push(chs)
 		} else if chs == ")" {
 			// правая скобка
-			for true {
+			for {
 				val, exists := e.stack.Pop()
 				if !exists {
 					break
@@ -130,9 +143,7 @@ func (e *Expression) parse(formula string) (string, error) {
 
 // Вычислить заданную постфиксную запись выражения.
 func (e *Expression) eval(formula string) (float64, error) {
-	defer func() {
-		e.stack.Clear()
-	}()
+	defer e.stack.Clear()
 	form := []rune(formula)
 	for i := 0; i < len(form); i++ {
 		ch := form[i]

@@ -5,21 +5,31 @@ import (
 	"strings"
 )
 
-func isEqual(line1 string, line2 string, ignoreCase bool, numChars int, numFields int) (bool, error) {
-	if ignoreCase {
+// Параметры uniq.
+type Options struct {
+	UseCount       bool // Подсчитать количество встречаний строки во входных данных. Вывести это число перед строкой отделив пробелом.
+	OutputRepeated bool // Вывести только те строки, которые повторились во входных данных.
+	OutputUnique   bool // Вывести только те строки, которые не повторились во входных данных.
+	NumFields      int  // Не учитывать первые numFields полей в строке. Полем в строке является непустой набор символов отделённый пробелом.
+	NumChars       int  // Не учитывать первые numChars символов в строке. При использовании вместе с параметром.
+	IgnoreCase     bool // Не учитывать регистр букв.
+}
+
+func isEqual(line1 string, line2 string, options Options) (bool, error) {
+	if options.IgnoreCase {
 		line1, line2 = strings.ToLower(line1), strings.ToLower(line2)
 	}
-	if numChars > 0 {
+	if options.NumChars > 0 {
 		var numChars1, numChars2 int
-		if numChars > len(line1) {
+		if options.NumChars > len(line1) {
 			numChars1 = len(line1)
 		} else {
-			numChars1 = numChars
+			numChars1 = options.NumChars
 		}
-		if numChars > len(line2) {
+		if options.NumChars > len(line2) {
 			numChars2 = len(line2)
 		} else {
-			numChars2 = numChars
+			numChars2 = options.NumChars
 		}
 		line1 = line1[numChars1:]
 		line2 = line2[numChars2:]
@@ -27,30 +37,30 @@ func isEqual(line1 string, line2 string, ignoreCase bool, numChars int, numField
 	return line1 == line2, nil
 }
 
-func filterLines(lines []string, ignoreCase bool, numChars int, numFields int) ([]string, error) {
+func filterLines(lines []string, options Options) ([]string, error) {
 	var linesFiltered []string
 	if len(lines) < 1 {
 		return lines, nil
 	}
 	curLine := lines[0]
 	linesFiltered = append(linesFiltered, curLine)
-	for i := 1; i < len(lines); i++ {
-		equal, err := isEqual(curLine, lines[i], ignoreCase, numChars, numFields)
+	for _, line := range lines {
+		equal, err := isEqual(curLine, line, options)
 		if err != nil {
 			return linesFiltered, err
 		}
 		if !equal {
-			curLine = lines[i]
-			linesFiltered = append(linesFiltered, lines[i])
+			curLine = line
+			linesFiltered = append(linesFiltered, line)
 		}
 	}
 	return linesFiltered, nil
 }
 
-func countLine(lines []string, targetLine string, ignoreCase bool, numChars int, numFields int) (int, error) {
+func countLine(lines []string, targetLine string, options Options) (int, error) {
 	counter := 0
 	for _, line := range lines {
-		equal, err := isEqual(line, targetLine, ignoreCase, numChars, numFields)
+		equal, err := isEqual(line, targetLine, options)
 		if err != nil {
 			return 0, err
 		}
@@ -61,41 +71,41 @@ func countLine(lines []string, targetLine string, ignoreCase bool, numChars int,
 	return counter, nil
 }
 
-func countLines(lines []string, ignoreCase bool, numChars int, numFields int) ([]string, error) {
+func countLines(lines []string, options Options) ([]string, error) {
 	var linesCounted []string
-	for i := 0; i < len(lines); i++ {
-		lineNum, err := countLine(lines, lines[i], ignoreCase, numChars, numFields)
+	for _, line := range lines {
+		lineNum, err := countLine(lines, line, options)
 		if err != nil {
 			return linesCounted, err
 		}
-		linesCounted = append(linesCounted, strconv.Itoa(lineNum)+" "+lines[i])
+		linesCounted = append(linesCounted, strconv.Itoa(lineNum)+" "+line)
 	}
 	return linesCounted, nil
 }
 
-func filterRepeated(lines []string, ignoreCase bool, numChars int, numFields int) ([]string, error) {
+func filterRepeated(lines []string, options Options) ([]string, error) {
 	var linesRepeated []string
-	for i := 0; i < len(lines); i++ {
-		lineNum, err := countLine(lines, lines[i], ignoreCase, numChars, numFields)
+	for _, line := range lines {
+		lineNum, err := countLine(lines, line, options)
 		if err != nil {
 			return linesRepeated, nil
 		}
 		if lineNum > 1 {
-			linesRepeated = append(linesRepeated, lines[i])
+			linesRepeated = append(linesRepeated, line)
 		}
 	}
 	return linesRepeated, nil
 }
 
-func filterUnique(lines []string, ignoreCase bool, numChars int, numFields int) ([]string, error) {
+func filterUnique(lines []string, options Options) ([]string, error) {
 	var linesUnique []string
-	for i := 0; i < len(lines); i++ {
-		lineNum, err := countLine(lines, lines[i], ignoreCase, numChars, numFields)
+	for _, line := range lines {
+		lineNum, err := countLine(lines, line, options)
 		if err != nil {
 			return linesUnique, err
 		}
 		if lineNum == 1 {
-			linesUnique = append(linesUnique, lines[i])
+			linesUnique = append(linesUnique, line)
 		}
 	}
 	return linesUnique, nil
@@ -105,7 +115,7 @@ func cutFields(lines []string, numFields int) (res []string, cutLines []string) 
 	res = lines
 	counter := 0
 	for i, line := range lines {
-		if strings.TrimSpace(line) == "" {
+		if len(strings.TrimSpace(line)) == 0 {
 			cutLines = lines[:i]
 			res = lines[i:]
 			counter++
@@ -115,16 +125,6 @@ func cutFields(lines []string, numFields int) (res []string, cutLines []string) 
 		}
 	}
 	return
-}
-
-// Параметры uniq.
-type Options struct {
-	UseCount       bool // Подсчитать количество встречаний строки во входных данных. Вывести это число перед строкой отделив пробелом.
-	OutputRepeated bool // Вывести только те строки, которые повторились во входных данных.
-	OutputUnique   bool // Вывести только те строки, которые не повторились во входных данных.
-	NumFields      int  // Не учитывать первые numFields полей в строке. Полем в строке является непустой набор символов отделённый пробелом.
-	NumChars       int  // Не учитывать первые numChars символов в строке. При использовании вместе с параметром.
-	IgnoreCase     bool // Не учитывать регистр букв.
 }
 
 func GetDefaultOptions() Options {
@@ -144,13 +144,13 @@ func Uniq(lines []string, options Options) (res []string, err error) {
 		lines, cutLines = cutFields(lines, options.NumFields)
 	}
 	if options.UseCount {
-		res, err = countLines(lines, options.IgnoreCase, options.NumChars, options.NumFields)
+		res, err = countLines(lines, options)
 	} else if options.OutputRepeated {
-		res, err = filterRepeated(lines, options.IgnoreCase, options.NumChars, options.NumFields)
+		res, err = filterRepeated(lines, options)
 	} else if options.OutputUnique {
-		res, err = filterUnique(lines, options.IgnoreCase, options.NumChars, options.NumFields)
+		res, err = filterUnique(lines, options)
 	} else {
-		res, err = filterLines(lines, options.IgnoreCase, options.NumChars, options.NumFields)
+		res, err = filterLines(lines, options)
 	}
 	res = append(cutLines, res...)
 	return
