@@ -42,8 +42,10 @@ func (s *Stack) Clear() {
 }
 
 var operPriorities = map[string]int{
-	"*/": 2,
-	"+-": 1,
+	"*": 2,
+	"/": 2,
+	"+": 1,
+	"-": 1,
 }
 
 type Expression struct{ stack Stack }
@@ -56,12 +58,12 @@ func (e *Expression) format(formula string) (string, error) {
 
 // Получить числовой приоритет соответствующего оператора.
 func (e *Expression) getPriority(operator string) int {
-	for k, v := range operPriorities {
-		if strings.Contains(k, operator) {
-			return v
-		}
+	priority, exists := operPriorities[operator]
+	if exists {
+		return priority
+	} else {
+		return -1
 	}
-	return -1
 }
 
 // Произвести парсинг оператора в инфиксной записи.
@@ -106,7 +108,7 @@ func (e *Expression) parse(formula string) (string, error) {
 		} else if priority != -1 {
 			// любой оператор
 			opParsed, err := e.parseOperator(chs, priority)
-			if (err != nil) {
+			if err != nil {
 				return parsed, err
 			}
 			parsed += opParsed

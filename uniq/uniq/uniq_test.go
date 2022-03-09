@@ -5,192 +5,140 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNoOptions(t *testing.T) {
-	var lines []string
-	var err error
-	var options Options
-	optionsDefault := GetDefaultOptions()
-
-	options = optionsDefault
-	lines, err = Uniq(
-		[]string {
-			"I love music",
-			"I love music",
-		}, options,
-	)
-	if assert.Nil(t, err) {
-		assert.Equal(t,
-		[]string {
-			"I love music",
-		}, lines)
-	}
+type Test struct {
+	input []string
+	want []string
+	options Options
 }
 
-func TestIgnoreCase(t *testing.T) {
-	var lines []string
-	var err error
-	var options Options
+func TestTableAll(t *testing.T) {
 	optionsDefault := GetDefaultOptions()
 
-	options = optionsDefault
-	options.IgnoreCase = true
-	lines, err = Uniq(
-		[]string {
-			"I LOVE MUSIC",
-			"I love music",
-		}, options,
-	)
-	if assert.Nil(t, err) {
-		assert.Equal(t,
-		[]string {
-			"I LOVE MUSIC",
-		}, lines)
-	}
-}
+	optIgnoreCase := optionsDefault
+	optIgnoreCase.IgnoreCase = true
 
-func TestFieldsChars(t *testing.T) {
-	var lines []string
-	var err error
-	var options Options
-	optionsDefault := GetDefaultOptions()
+	optFields := optionsDefault
+	optFields.NumFields = 1
 
-	options = optionsDefault
-	options.NumFields = 1
-	lines, err = Uniq(
-		[]string {
-			"I love music",
-			"I love music",
-			" ",
-			"I LOVE MUSIC",
-		}, options,
-	)
-	if assert.Nil(t, err) {
-		assert.Equal(t,
-		[]string {
-			"I love music",
-			"I love music",
-			" ",
-			"I LOVE MUSIC",
-		}, lines)
-	}
+	optFieldsChars := optionsDefault
+	optFieldsChars.NumFields = 1
+	optFieldsChars.NumChars = 1
 
-	options = optionsDefault
-	options.NumFields = 1
-	options.NumChars = 1
-	lines, err = Uniq(
-		[]string {
-			"A love music",
-			"B love music",
-			" ",
-			"C I LOVE MUSIC",
-			"D I LOVE MUSIC",
-		}, options,
-	)
-	if assert.Nil(t, err) {
-		assert.Equal(t,
-		[]string {
-			"A love music",
-			"B love music",
-			" ",
-			"C I LOVE MUSIC",
-		}, lines)
-	}
-}
+	optOutputUnique := optionsDefault
+	optOutputUnique.OutputUnique = true
 
-func TestOutputUniq(t *testing.T) {
-	var lines []string
-	var err error
-	var options Options
-	optionsDefault := GetDefaultOptions()
+	optRepeated := optionsDefault
+	optRepeated.OutputRepeated = true
 
-	options = optionsDefault
-	options.OutputUnique = true
-	lines, err = Uniq(
-		[]string {
-			"I love music",
-			"I do not love music",
-			"I love music",
-			"I LOVE MUSIC",
-		}, options,
-	)
-	if assert.Nil(t, err) {
-		assert.Equal(t,
-		[]string {
-			"I do not love music",
-			"I LOVE MUSIC",
-		}, lines)
-	}
-}
+	optCount := optionsDefault
+	optCount.UseCount = true
 
-func TestOutputRepeated(t *testing.T) {
-	var lines []string
-	var err error
-	var options Options
-	optionsDefault := GetDefaultOptions()
-
-	options = optionsDefault
-	options.OutputRepeated = true
-	lines, err = Uniq(
-		[]string {
-			"I love music",
-			"I do not love music",
-			"I love music",
-			"I LOVE MUSIC",
-		}, options,
-	)
-	if assert.Nil(t, err) {
-		assert.Equal(t,
-		[]string {
-			"I love music",
-			"I love music",
-		}, lines)
-	}
-}
-
-func TestCount(t *testing.T) {
-	var lines []string
-	var err error
-	var options Options
-	optionsDefault := GetDefaultOptions()
-
-	options = optionsDefault
-	options.UseCount = true
-	lines, err = Uniq(
-		[]string {
-			"I love music",
-			"I do not love music",
-			"I love music",
-			"I LOVE MUSIC",
-		}, options,
-	)
-	if assert.Nil(t, err) {
-		assert.Equal(t,
-		[]string {
-			"2 I love music",
-			"1 I do not love music",
-			"2 I love music",
-			"1 I LOVE MUSIC",
-		}, lines)
+	tests := []Test {
+		// no options
+		{
+			input: []string {
+				"I love music",
+				"I love music",
+			},
+			want: []string {
+				"I love music",
+			},
+			options: GetDefaultOptions(),
+		},
+		// ignore case
+		{
+			input: []string {
+				"I LOVE MUSIC",
+				"I love music",
+			},
+			want: []string {
+				"I LOVE MUSIC",
+			},
+			options: optIgnoreCase,
+		},
+		// fileds and chars
+		{
+			input:[]string {
+				"I love music",
+				"I love music",
+				" ",
+				"I LOVE MUSIC",
+			},
+			want: []string {
+				"I love music",
+				"I love music",
+				" ",
+				"I LOVE MUSIC",
+			},
+			options: optFields,
+		},
+		// fields and chars
+		{
+			input: []string {
+				"A love music",
+				"B love music",
+				" ",
+				"C I LOVE MUSIC",
+				"D I LOVE MUSIC",
+			},
+			want: []string {
+				"A love music",
+				"B love music",
+				" ",
+				"C I LOVE MUSIC",
+			},
+			options: optFieldsChars,
+		},
+		// output unique
+		{
+			input: []string {
+				"I love music",
+				"I do not love music",
+				"I love music",
+				"I LOVE MUSIC",
+			},
+			want: []string {
+				"I do not love music",
+				"I LOVE MUSIC",
+			},
+			options: optOutputUnique,
+		},
+		// output repeated
+		{
+			input: []string {
+				"I love music",
+				"I do not love music",
+				"I love music",
+				"I LOVE MUSIC",
+			},
+			want: []string {
+				"I love music",
+				"I love music",
+			},
+			options: optRepeated,
+		},
+		// count
+		{
+			input: []string {
+				"I love music",
+				"I do not love music",
+				"I love music",
+				"I LOVE MUSIC",
+			},
+			want: []string {
+				"2 I love music",
+				"1 I do not love music",
+				"2 I love music",
+				"1 I LOVE MUSIC",
+			},
+			options: optCount,
+		},
 	}
 
-	options = optionsDefault
-	options.UseCount = true
-	options.IgnoreCase = true
-	lines, err = Uniq(
-		[]string {
-			"I love music",
-			"I do not love music",
-			"I love music",
-			"I LOVE MUSIC",
-		}, options,
-	)
-	if assert.Nil(t, err) {
-		assert.Equal(t,
-		[]string {
-			"3 I love music",
-			"1 I do not love music",
-			"3 I love music",
-			"3 I LOVE MUSIC",
-		}, lines)
+	for _, test := range tests {
+		res, err := Uniq(test.input, test.options)
+		if assert.Nil(t, err) {
+			assert.Equal(t, res, test.want)
+		}
 	}
 }
