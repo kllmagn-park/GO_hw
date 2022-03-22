@@ -11,9 +11,9 @@ import (
 var mu sync.Mutex // мютекс во избежание перегрева функции DataSignerMd5
 
 func SingleHash(in, out chan interface{}) {
-	isDone := make(chan struct{})
-	var counter int
+	wg := new(sync.WaitGroup)
 	for dataInterf := range in {
+		wg.Add(1)
 		innerWrapper := func(data string) {
 			outMD5, outCRC := make(chan interface{}), make(chan interface{})
 			go func() {
@@ -27,22 +27,17 @@ func SingleHash(in, out chan interface{}) {
 			}()
 			res := (<-outCRC).(string) + "~" + (<-outMD5).(string)
 			out <- res
-			isDone <- struct{}{}
+			wg.Done()
 		}
 		go innerWrapper(fmt.Sprintf("%v", dataInterf))
-		counter++
 	}
-	// ждем завершения всех внутренних горутин, чтобы закрыть выходной канал
-	for i := 0; i < counter; i++ {
-		<-isDone
-	}
+	wg.Wait() // ждем завершения всех внутренних горутин, чтобы закрыть выходной канал
 }
 
 func MultiHash(in, out chan interface{}) {
-	isDone := make(chan struct{})
-	var counter int
+	wg := new(sync.WaitGroup)
 	for dataInterf := range in {
-		fmt.Println("MH", dataInterf.(string))
+		wg.Add(1)
 		innerWrapper := func(data string) {
 			var outChans []chan interface{}
 			var hashes []string
@@ -60,15 +55,11 @@ func MultiHash(in, out chan interface{}) {
 				hashes = append(hashes, (<-outChans[i]).(string))
 			}
 			out <- strings.Join(hashes, "")
-			isDone <- struct{}{}
+			wg.Done()
 		}
 		go innerWrapper(fmt.Sprintf("%v", dataInterf))
-		counter++
 	}
-	// ждем завершения всех внутренних горутин, чтобы закрыть выходной канал
-	for i := 0; i < counter; i++ {
-		<-isDone
-	}
+	wg.Wait() // ждем завершения всех внутренних горутин, чтобы закрыть выходной канал
 }
 
 func CombineResults(in, out chan interface{}) {
